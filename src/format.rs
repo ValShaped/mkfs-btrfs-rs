@@ -1,16 +1,16 @@
 //! # Creates a Btrfs filesystem.
-//! [Requires btrfs-progs.](https://btrfs.readthedocs.io/en/latest/Introduction.html)
+//! Requires [`btrfs-progs`].
 //!
-//! A wrapper around `mkfs.btrfs`
+//! A wrapper around [`mkfs.btrfs`].
 //!
 //! Use `FormatterOptions` to specify the options you want to format with, then
-//! format with `.finalize().format();`
+//! format with `.build().format();`
 //!
-//! Documentation for [`mkfs.btrfs`: here](https://btrfs.readthedocs.io/en/latest/mkfs.btrfs.html).
+//! See usage for [`mkfs.btrfs`] for more details.
 //!
-//! # Example:
+//! # Examples
 //! ```
-//! use std::path::PathBuf;
+//! # use mkfs_btrfs_rs::Error;
 //! use mkfs_btrfs_rs::format::{
 //!     ChecksumAlgorithm::Crc32c,
 //!     DataProfile,
@@ -19,43 +19,44 @@
 //! // Configure a formatter
 //! let formatter = Formatter::options()
 //!     // These are all optional
-//!     .byte_count(536_870_912_u64).unwrap()
-//!     .checksum(Crc32c).unwrap()
-//!     .data(DataProfile::Dup).unwrap()
-//!     .features(["mixed-bg"]).unwrap()
-//!     .force().unwrap()      // true if called
-//!     .label("label").unwrap()
-//!     .metadata(DataProfile::Dup).unwrap()
-//!     .mixed().unwrap()      // true if called
-//!     .no_discard().unwrap() // true if called
-//!     .nodesize(4096_usize).unwrap()
-//!     .rootdir(PathBuf::from("./testdir")).unwrap()
-//!     .runtime_features(["quota"]).unwrap()
-//!     .sectorsize(4096_usize).unwrap()
-//!     .shrink().unwrap()     // true if called
-//!     .uuid("73e1b7e2-a3a8-49c2-b258-06f01a889bba").unwrap()
+//!     .byte_count(536_870_912_u64)?
+//!     .checksum(Crc32c)?
+//!     .data(DataProfile::Dup)?
+//!     .features(["mixed-bg"])?
+//!     .force()?              // true if called
+//!     .label("label")?
+//!     .metadata(DataProfile::Dup)?
+//!     .mixed()?              // true if called
+//!     .no_discard()?         // true if called
+//!     .nodesize(4096_usize)?
+//!     .rootdir("./testdir")?
+//!     .runtime_features(["quota"])?
+//!     .sectorsize(4096_usize)?
+//!     .shrink()?             // true if called
+//!     .uuid("73e1b7e2-a3a8-49c2-b258-06f01a889bba")?
 //!     // build the Formatter
-//!     .finalize();
+//!     .build();
 //! // Format a device
-//! formatter.format(&PathBuf::from("./test.btrfs")).unwrap();
+//! formatter.format("./test.btrfs")?;
+//! # Ok::<(), Error>(())
 //! ```
+//! [`btrfs-progs`]: https://btrfs.readthedocs.io/en/latest/Introduction.html
+//! [`mkfs.btrfs`]: https://btrfs.readthedocs.io/en/latest/mkfs.btrfs.html
 
 use crate::{Error::*, Result};
 use std::{
     ffi::OsString,
     io::Result as IoResult,
-    path::{Path, PathBuf},
+    path::Path,
     process::{Command, Output},
 };
 
 pub const RUNTIME_FEATURES: [&str; 2] = ["quota", "free-space-tree"];
 
-/// # DataProfile
-/// Represents the valid data profiles for
+/// Represents the set of valid (meta)data profiles.
 /// ```sh
 /// mkfs.btrfs --data ( raid0 | raid1 | ... )
 /// ```
-///
 #[derive(Copy, Clone, Debug)]
 pub enum DataProfile {
     Raid0,
@@ -87,8 +88,7 @@ impl std::fmt::Display for DataProfile {
     }
 }
 
-/// # ChecksumAlgorithm
-/// Represents the valid checksum algorithms for
+/// Represents the set of valid block checksum algorithms.
 /// ```sh
 /// mkfs.btrfs --checksum [ crc32c | xxhash | sha256 | blake2 ]
 /// ```
@@ -129,8 +129,7 @@ impl std::fmt::Display for FormatOpt {
     }
 }
 
-/// ### FormatterOptions
-/// Representation of options for [`mkfs.btrfs`](https://btrfs.readthedocs.io/en/latest/mkfs.btrfs.html#options).
+/// Represents options for [`mkfs.btrfs`](https://btrfs.readthedocs.io/en/latest/mkfs.btrfs.html#options).
 #[derive(Clone, Debug, Default)]
 pub struct FormatterOptions {
     byte_count: Option<OsString>,       // Uint
@@ -155,10 +154,11 @@ impl FormatterOptions {
     ///
     /// # Example
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .byte_count(536_870_912_u64)
-    ///     .unwrap();
+    ///     .byte_count(536_870_912_u64)?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn byte_count(mut self, byte_count: u64) -> Result<Self> {
         self.byte_count = Some(OsString::from(format!("--byte-count={byte_count}")));
@@ -168,13 +168,14 @@ impl FormatterOptions {
     ///
     /// # Example
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::{
     /// *,
     /// ChecksumAlgorithm::Crc32c
     /// };
     /// Formatter::options()
-    ///     .checksum(Crc32c)
-    ///     .unwrap();
+    ///     .checksum(Crc32c)?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn checksum(mut self, checksum: ChecksumAlgorithm) -> Result<Self> {
         self.checksum = Some(OsString::from(format!("--checksum={checksum}")));
@@ -182,12 +183,13 @@ impl FormatterOptions {
     }
     /// Specify the profile for data block groups (as DataProfile.)
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::{DataProfile, Formatter};
     /// Formatter::options()
-    ///     .data(DataProfile::Dup)
-    ///     .unwrap();
+    ///     .data(DataProfile::Dup)?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn data(mut self, data: DataProfile) -> Result<Self> {
         self.data = Some(OsString::from(format!("--data={data}")));
@@ -195,12 +197,13 @@ impl FormatterOptions {
     }
     /// Set mkfs-time features. Unset features by prefixing them with '^'.
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .features(["mixed-bg"])
-    ///     .unwrap();
+    ///     .features(["mixed-bg"])?;
+    /// # Ok::<(), Error>(())
     /// ```
     // TODO: Verify features.
     // ? mkfs.btrfs verifies them again later, so is that even necessary?
@@ -218,12 +221,13 @@ impl FormatterOptions {
     }
     /// Force-format the device, even if an existing filesystem is present.
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .force()
-    ///     .unwrap();
+    ///     .force()?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn force(mut self) -> Result<Self> {
         self.force = Some(OsString::from("--force"));
@@ -231,12 +235,13 @@ impl FormatterOptions {
     }
     /// Set the partition label.
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .label("ExampleLabel")
-    ///     .unwrap();
+    ///     .label("ExampleLabel")?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn label(mut self, label: &str) -> Result<Self> {
         if label.len() > 255 {
@@ -250,12 +255,13 @@ impl FormatterOptions {
     }
     /// Specify the profile for metadata block groups (as DataProfile.)
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::{DataProfile, Formatter};
     /// Formatter::options()
-    ///     .metadata(DataProfile::Dup)
-    ///     .unwrap();
+    ///     .metadata(DataProfile::Dup)?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn metadata(mut self, metadata: DataProfile) -> Result<Self> {
         self.metadata = Some(OsString::from(format!("--metadata={metadata}")));
@@ -263,12 +269,13 @@ impl FormatterOptions {
     }
     /// Enable mixing of data and metadata blocks
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .mixed()
-    ///     .unwrap();
+    ///     .mixed()?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn mixed(mut self) -> Result<Self> {
         self.mixed = Some(OsString::from("--mixed"));
@@ -276,12 +283,13 @@ impl FormatterOptions {
     }
     /// Disable implicit TRIM of storage device.
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .no_discard()
-    ///     .unwrap();
+    ///     .no_discard()?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn no_discard(mut self) -> Result<Self> {
         self.no_discard = Some(OsString::from("--nodiscard"));
@@ -291,12 +299,13 @@ impl FormatterOptions {
     ///
     /// `nodesize must be a power of 2 less than 2^14
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .label("ExampleLabel")
-    ///     .unwrap();
+    ///     .label("ExampleLabel")?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn nodesize(mut self, nodesize: usize) -> Result<Self> {
         if nodesize.is_power_of_two() && nodesize <= 16384 {
@@ -310,31 +319,31 @@ impl FormatterOptions {
     }
     /// Specify a directory containing data to copy into the btrfs filesystem.
     ///
-    /// # Example:
+    /// # Examples
     /// ```
-    /// use std::path::PathBuf;
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .rootdir(PathBuf::from("./testdir"))
-    ///     .unwrap();
+    ///     .rootdir("./testdir")?;
+    /// # Ok::<(), Error>(())
     /// ```
-    pub fn rootdir(mut self, rootdir: PathBuf) -> Result<Self> {
+    pub fn rootdir<P: AsRef<Path>>(mut self, rootdir: P) -> Result<Self> {
         // make sure the rootdir is a valid Path
-        rootdir.try_exists()?;
-
-        let rootdir = format!("--rootdir={}", rootdir.display());
+        rootdir.as_ref().try_exists()?;
+        let rootdir = format!("--rootdir={}", rootdir.as_ref().display());
         self.rootdir = Some(OsString::from(rootdir));
         Ok(self)
     }
     /// Set runtime features.
     /// Unset features by prefixing them with '^'.
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .runtime_features(["quota"])
-    ///     .unwrap();
+    ///     .runtime_features(["quota"])?;
+    /// # Ok::<(), Error>(())
     /// ```
     // TODO: Verify runtime features? is that even necessary?
     pub fn runtime_features<'a>(
@@ -357,12 +366,13 @@ impl FormatterOptions {
     /// *If set to a value unsupported by the current kernel,*
     /// *the resulting volume will not be mountable.*
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .sectorsize(4096_usize)
-    ///     .unwrap();
+    ///     .sectorsize(4096_usize)?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn sectorsize(mut self, sectorsize: usize) -> Result<Self> {
         self.sectorsize = Some(OsString::from(format!("--sectorsize={sectorsize}")));
@@ -371,12 +381,13 @@ impl FormatterOptions {
     /// If the specified device is a file, and the `rootdir` option is specified,
     /// shrink the file to the minimum required size
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .shrink()
-    ///     .unwrap();
+    ///     .shrink()?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn shrink(mut self) -> Result<Self> {
         self.shrink = Some(OsString::from("--shrink"));
@@ -384,12 +395,13 @@ impl FormatterOptions {
     }
     /// Set the partition UUID
     ///
-    /// # Example:
+    /// # Examples
     /// ```
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .uuid("73e1b7e2-a3a8-49c2-b258-06f01a889bba")
-    ///     .unwrap();
+    ///     .uuid("73e1b7e2-a3a8-49c2-b258-06f01a889bba")?;
+    /// # Ok::<(), Error>(())
     /// ```
     // TODO: Verify UUIDs (with external crate?)
     pub fn uuid(mut self, uuid: &str) -> Result<Self> {
@@ -397,7 +409,7 @@ impl FormatterOptions {
         Ok(self)
     }
 
-    /// Convert self into args (AKA Vec<OsString>)
+    /// Convert self into args (AKA `Vec<OsString>`)
     fn to_args(&self) -> Vec<OsString> {
         let mut args = vec![];
         for option in [
@@ -426,7 +438,7 @@ impl FormatterOptions {
 
     /// Dump FormatterOptions as they'll be passed to mkfs.btrfs
     ///
-    /// # Example:
+    /// # Examples
     /// ```
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
@@ -439,25 +451,25 @@ impl FormatterOptions {
 
     /// Bake FormatterOptions into a Formatter
     ///
-    /// # Example:
+    /// # Examples
     /// ```
-    /// use std::path::PathBuf;
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
     /// Formatter::options()
-    ///     .label("my-Btrfs-volume").unwrap()
-    ///     .rootdir(PathBuf::from("./testdir")).unwrap()
-    ///     .shrink().unwrap()
-    ///     .finalize();
+    ///     .label("my-Btrfs-volume")?
+    ///     .rootdir("./testdir")?
+    ///     .shrink()?
+    ///     .build();
+    /// # Ok::<(), Error>(())
     /// ```
-    pub fn finalize(&self) -> Formatter {
+    pub fn build(&self) -> Formatter {
         let args = self.to_args();
         Formatter { args }
     }
 }
 
-/// ### Formatter
-/// A rusty-ish(?) wrapper for mkfs.btrfs. I tried!
-#[derive(Debug)]
+/// Formats anything that can be Btrfs-formatted.
+#[derive(Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Formatter {
     args: Vec<OsString>,
 }
@@ -466,32 +478,34 @@ impl Formatter {
     /// Specify FormatterOptions first, then build a formatter
     ///
     /// ```
-    /// use std::path::PathBuf;
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::Formatter;
-    ///
     /// let options = Formatter::options()
     /// /* set options here...*/;
-    /// options.finalize().format(&PathBuf::from("./test.btrfs")).unwrap();
+    /// options.build().format("./test.btrfs")?;
+    /// # Ok::<(), Error>(())
     /// ```
     pub fn options() -> FormatterOptions {
         FormatterOptions::default()
     }
     /// Format a device with mkfs.btrfs
     ///
-    /// # Example:
+    /// # Examples
     /// ```
-    /// use std::path::PathBuf;
+    /// # use mkfs_btrfs_rs::Error;
     /// use mkfs_btrfs_rs::format::*;
     /// Formatter::options()
-    ///     .label("my-Btrfs-volume").unwrap()
-    ///     .rootdir(PathBuf::from("./testdir")).unwrap()
-    ///     .shrink().unwrap()
-    ///     .finalize()
-    ///     .format(&PathBuf::from("./test.btrfs")).unwrap();
+    ///     .label("my-Btrfs-volume")?
+    ///     .rootdir("./testdir")?
+    ///     .shrink()?
+    ///     .build()
+    ///     .format("./test.btrfs")?;
+    /// # Ok::<(), Error>(())
     /// ```
-    pub fn format(mut self, device: &Path) -> IoResult<Output> {
-        device.try_exists()?;
-        self.args.push(OsString::from(device));
+    pub fn format<P: AsRef<Path>>(mut self, device: P) -> IoResult<Output> {
+        device.as_ref().try_exists()?;
+        self.args.push(OsString::from(device.as_ref()));
+        // FIXME: Parse the output of mkfs.btrfs and send it back properly.
         Command::new("mkfs.btrfs").args(self.args).output()
     }
 }
