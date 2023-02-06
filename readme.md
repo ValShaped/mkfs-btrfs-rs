@@ -10,6 +10,16 @@ A wrapper for `mkfs.btrfs` in type-safe Rust.
 
 # Examples
 ```rust no_run
+use mkfs_btrfs_rs::{Result, Formatter};
+fn main() -> Result<()> {
+    let formatter = Formatter::options()
+        .label("my_awesome_label")?
+        .build()
+        .format("/tmp/some/file")?;
+    Ok(())
+}
+```
+```rust no_run
 use mkfs_btrfs_rs::{Formatter, Result};
 use std::process::Output;
 fn main() -> Result<()> {
@@ -33,16 +43,6 @@ fn main() -> Result<()> {
         String::from_utf8(out).unwrap(),
         String::from_utf8(err).unwrap(),
     );
-    Ok(())
-}
-```
-```rust no_run
-use mkfs_btrfs_rs::{Result, Formatter};
-fn main() -> Result<()> {
-    let formatter = Formatter::options()
-        .label("my_awesome_label")?
-        .build()
-        .format("/tmp/some/file")?;
     Ok(())
 }
 ```
