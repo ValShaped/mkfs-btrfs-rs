@@ -2,6 +2,13 @@
 name = "mkfs-btrfs-rs"
 version = "0.1.0"
 edition = "2021"
+categories = ["filesystem"]
+description = "Rusty wrapper for mkfs.btrfs"
+keywords = ["mkfs-btrfs", "wrapper"]
+license = "MIT"
+license-file = "./LICENSE"
+readme = "./readme.md"
+repository = "https://github.com/ValShaped/mkfs-btrfs-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
