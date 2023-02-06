@@ -37,7 +37,7 @@ fn format_start_to_finish() -> Result<()> {
         .expect("`no_discard` should not fail.")
         .nodesize(4096_usize)
         .expect("4096 is a valid nodesize")
-        .rootdir(PathBuf::from("src"))
+        .rootdir("src")
         .expect("Path should exist (it's the path of this directory")
         .runtime_features(["quota"])
         .expect("quota is a valid runtime feature")
@@ -48,8 +48,8 @@ fn format_start_to_finish() -> Result<()> {
         .uuid("73e1b7e2-a3a8-49c2-b258-06f01a889bba")
         .expect("This uuid is of the correct format")
         .dump_args()
-        .finalize()
-        .format(&path_buffer)
+        .build()
+        .format(path)
         .expect("Format::format should succeed.");
 
     assert!(
