@@ -6,7 +6,6 @@ categories = ["filesystem"]
 description = "Rusty wrapper for mkfs.btrfs"
 keywords = ["mkfs-btrfs", "wrapper"]
 license = "MIT"
-license-file = "./LICENSE"
 readme = "./readme.md"
 repository = "https://github.com/ValShaped/mkfs-btrfs-rs"
 
