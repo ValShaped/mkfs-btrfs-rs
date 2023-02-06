@@ -1,21 +1,4 @@
-//! Wraps `mkfs.btrfs` for use in rust.
-//!
-//! NOT a FFI binding, just command wrapper, to make you feel a bit like you're writing rust.
-//!
-//! If you want to create a btrfs volume, check out the [`Formatter`].
-//! If you want to see the options we support, check out [`format::FormatterOptions`]
-//!
-//! # Examples
-//! ```rust,no_run
-//! use mkfs_btrfs_rs::{Result, Formatter};
-//! fn main() -> Result<()> {
-//!     let formatter = Formatter::options()
-//!         .label("my_awesome_label")?
-//!         .build()
-//!         .format("/tmp/some/file")?;
-//!     Ok(())
-//! }
-//! ```
+#![doc = include_str!("../readme.md")]
 
 use thiserror::Error;
 
