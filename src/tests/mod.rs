@@ -4,12 +4,23 @@
 
 use crate::{format::*, Result};
 
-use std::{path::PathBuf, process::Command};
+use std::process::Command;
 
+mod checksum {
+    use crate::format::ChecksumAlgorithm;
+    #[test]
+    fn display() {
+        assert_eq!("blake2", format!("{}", ChecksumAlgorithm::Blake2));
+        assert_eq!("crc32c", format!("{}", ChecksumAlgorithm::Crc32c));
+        assert_eq!("sha256", format!("{}", ChecksumAlgorithm::Sha256));
+        assert_eq!("xxhash", format!("{}", ChecksumAlgorithm::XxHash));
+    }
+}
+
+/// Test every single option
 #[test]
 fn format_start_to_finish() -> Result<()> {
-    let path = "test.btrfs";
-    let path_buffer = PathBuf::from(path);
+    let path = "/tmp/test.btrfs";
     // create empty file
     Command::new("rm").arg(path).output()?;
     Command::new("truncate")
