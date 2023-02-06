@@ -18,6 +18,7 @@ mod checksum {
 }
 
 /// Test every single option
+// FIXME: Add separate test for each option
 #[test]
 fn format_start_to_finish() -> Result<()> {
     let path = "/tmp/test.btrfs";
